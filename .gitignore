@@ -1,0 +1,15 @@
+
+# PSoC Creator
+codegentemp/
+Generated_Source/
+DP8051/
+
+*.cywrk.*
+*.cyprj.*
+*.svd
+*.rpt
+*_timing.html
+*.cyversion
+*.uvopt
+*.uvproj
+*.cyfit
