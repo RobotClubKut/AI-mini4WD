@@ -15,8 +15,14 @@ int main()
 {
 	PWM_Start();
     CyGlobalIntEnable; /* Enable global interrupts. */
-
+	INH_Write(0);
 	PWM_WriteCompare1(0);
+	PWM_WriteCompare2(0);
+	
+	CyDelay(500);
+	
+	INH_Write(1);
+	PWM_WriteCompare1(60);
 	PWM_WriteCompare2(0);
     for(;;)
     {
