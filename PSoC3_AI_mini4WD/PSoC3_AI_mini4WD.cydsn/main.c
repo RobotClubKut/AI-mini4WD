@@ -20,9 +20,9 @@ CY_ISR(isr_int)
 }
 int main()
 {
-    int F=250*0.50;
+    int F=250*0.30;
     uint8 select = 1;
-    int16 left, right;
+    int16 axi_x=0,axi_y=0,axi_z=0;
     int16 sensData[2][BUFFER_SIZE];
     uint16 i = 0;
     uint16 j = 0;
@@ -35,6 +35,7 @@ int main()
     AMux_Start();
     AMux_Connect(0);
     AMux_Disconnect(1);
+    AMux_Disconnect(2);
     ADC_DelSig_Start();
     ADC_DelSig_StartConvert();
     
@@ -52,18 +53,31 @@ int main()
     {
         /* Place your application code here. */
         if(ADC_DelSig_IsEndConversion(ADC_DelSig_RETURN_STATUS)){
-            if(select){
-                right = ADC_DelSig_GetResult16();
+            if(select == 1){
+                axi_x = ADC_DelSig_GetResult16();
                 ADC_DelSig_StopConvert();
                 AMux_Disconnect(0);
+                AMux_Disconnect(2);
                 AMux_Connect(1);
                 ADC_DelSig_StartConvert();
-                select = 0;
+                select = 2;
             }
-            else{
-                left = ADC_DelSig_GetResult16();
+            else if(select == 2)
+			{
+                axi_y = ADC_DelSig_GetResult16();
+                ADC_DelSig_StopConvert();
+                AMux_Disconnect(0);
+                AMux_Disconnect(1);
+				AMux_Connect(2);
+                ADC_DelSig_StartConvert();
+                select = 3;
+            }
+			else if(select == 3)
+			{
+                axi_z = ADC_DelSig_GetResult16();
                 ADC_DelSig_StopConvert();
                 AMux_Disconnect(1);
+                AMux_Disconnect(2);
                 AMux_Connect(0);
                 ADC_DelSig_StartConvert();
                 select = 1;
@@ -71,10 +85,10 @@ int main()
         }
         if(isr_flag)
         {
-            sensData[0][i] = left;
-            sensData[1][i] = right;
+            sensData[0][i] = axi_x;
+            sensData[1][i] = axi_z;
             
-            //sprintf(msg,"%d,%d,%d\n",j,left,right);
+            //sprintf(msg,"%5d,%5d,%5d\n",(int)axi_x,(int)axi_y,(int)axi_z);
             //UART_PutString(msg);
             if(i < BUFFER_SIZE)
             {
@@ -83,8 +97,8 @@ int main()
             else
             {
                 PWM_WriteCompare1(0);
-	            PWM_WriteCompare2(0);            
-                if((left < 3400) && (right < 3400)){
+	            PWM_WriteCompare2(0);
+				if(DataFlag_Read() == 1){
                     for(j = 0;j < BUFFER_SIZE;j++){
                         sprintf(msg,"%d,%d,%d\n",j,sensData[0][j],sensData[1][j]);
                         UART_PutString(msg);
