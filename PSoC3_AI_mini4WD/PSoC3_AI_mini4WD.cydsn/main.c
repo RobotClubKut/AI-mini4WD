@@ -20,7 +20,7 @@ CY_ISR(isr_int)
 }
 int main()
 {
-    int F=250*0.30;
+    int F=250*0.50;
     uint8 select = 1;
     int16 axi_x=0,axi_y=0,axi_z=0;
     int16 sensData[2][BUFFER_SIZE];
@@ -53,7 +53,8 @@ int main()
     {
         /* Place your application code here. */
         if(ADC_DelSig_IsEndConversion(ADC_DelSig_RETURN_STATUS)){
-            if(select == 1){
+            // 横のデータ
+			if(select == 1){
                 axi_x = ADC_DelSig_GetResult16();
                 ADC_DelSig_StopConvert();
                 AMux_Disconnect(0);
@@ -62,6 +63,7 @@ int main()
                 ADC_DelSig_StartConvert();
                 select = 2;
             }
+			// 縦のデータ
             else if(select == 2)
 			{
                 axi_y = ADC_DelSig_GetResult16();
@@ -72,6 +74,7 @@ int main()
                 ADC_DelSig_StartConvert();
                 select = 3;
             }
+			//高さのデータ
 			else if(select == 3)
 			{
                 axi_z = ADC_DelSig_GetResult16();
@@ -85,13 +88,12 @@ int main()
         }
         if(isr_flag)
         {
-            sensData[0][i] = axi_x;
-            sensData[1][i] = axi_z;
-            
-            //sprintf(msg,"%5d,%5d,%5d\n",(int)axi_x,(int)axi_y,(int)axi_z);
+            //sprintf(msg,"%5d,%5d,%5d\n",(int)axi_x-2158,(int)axi_y-2048,(int)axi_z-2048);
             //UART_PutString(msg);
             if(i < BUFFER_SIZE)
             {
+				sensData[0][i] = axi_x;
+            	sensData[1][i] = axi_z;
                 i++;
             }
             else
@@ -100,10 +102,11 @@ int main()
 	            PWM_WriteCompare2(0);
 				if(DataFlag_Read() == 1){
                     for(j = 0;j < BUFFER_SIZE;j++){
-                        sprintf(msg,"%d,%d,%d\n",j,sensData[0][j],sensData[1][j]);
+                        sprintf(msg,"%d,%d,%d\n",j*5,sensData[0][j],sensData[1][j]);
                         UART_PutString(msg);
                     }
-                    while(1);
+                    while(DataFlag_Read() == 1);
+					
                 }
             }
             isr_flag = 0;
