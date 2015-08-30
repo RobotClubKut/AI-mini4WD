@@ -92,7 +92,7 @@ int main()
             //UART_PutString(msg);
             if(i < BUFFER_SIZE)
             {
-				sensData[0][i] = axi_x;
+				sensData[0][i] = axi_y;
             	sensData[1][i] = axi_z;
                 i++;
             }
