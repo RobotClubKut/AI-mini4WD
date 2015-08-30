@@ -14,6 +14,7 @@
 #define BUFFER_SIZE 900
 
 bit isr_flag = 0;
+uint8 select = 1;
 
 CY_ISR(isr_int)
 {
@@ -21,9 +22,7 @@ CY_ISR(isr_int)
 }
 
 uint8 AI_mini4WD_GetAxi(uint16* axi_x,uint16* axi_y,uint16* axi_z)
-{
-	static uint8 select = 1;
-	
+{	
 	if(ADC_DelSig_IsEndConversion(ADC_DelSig_RETURN_STATUS)){
         // 横のデータ
 		if(select == 1){
@@ -96,11 +95,12 @@ void AI_mini4WD_Init(uint16* axi_x_fir,uint16* axi_y_fir,uint16* axi_z_fir,uint1
 
 int main()
 {
-    int F=250*0.40;
+    int F=(int)(250*0.55);
     uint16 axi_x=0,axi_y=0,axi_z=0;
     uint16 sensData[2][BUFFER_SIZE];
     uint16 i = 0;
     uint16 j = 0;
+	uint16 time = 0;
     
 	uint16 axi_x_fir[17];
 	uint16 axi_y_fir[17];
@@ -112,8 +112,9 @@ int main()
 	AI_mini4WD_Init(axi_x_fir,axi_y_fir,axi_z_fir,1000);
 	
 	INH_Write(1);
-	PWM_WriteCompare1(F);
+	PWM_WriteCompare1(250);
 	PWM_WriteCompare2(0);
+	isr_flag = 0;
     for(;;)
     {
         /* Place your application code here. */
@@ -122,6 +123,7 @@ int main()
         {
             //sprintf(msg,"%5d,%5d,%5d\n",(int)axi_x-2158,(int)axi_y-2048,(int)axi_z-2048);
             //UART_PutString(msg);
+			
 			axi_x_fir[axi_counter] = axi_x;
 			axi_y_fir[axi_counter] = axi_y;
 			axi_z_fir[axi_counter] = axi_z;
@@ -154,8 +156,6 @@ int main()
             }
             else
             {
-                PWM_WriteCompare1(0);
-	            PWM_WriteCompare2(0);
 				if(DataFlag_Read() == 1){
                     for(j = 0;j < BUFFER_SIZE;j++){
                         sprintf(msg,"%d,%d,%d\n",(int)(j*5),(int)sensData[0][j],(int)sensData[1][j]);
@@ -165,6 +165,84 @@ int main()
 					
                 }
             }
+			
+			if(time < BUFFER_SIZE)
+			{
+				/*
+				if((2048 - (int)axi_z_fir[0]) > 0)
+				{
+					PWM_WriteCompare1(0);
+	        	    PWM_WriteCompare2((int)(250*0.10));
+				}
+				else if(((2048 - (int)axi_x_fir[0]) > -300) && ((2048 - (int)axi_x_fir[0]) < 300))
+				{
+					PWM_WriteCompare1((int)(250*0.80));
+	        	    PWM_WriteCompare2(0);
+				}
+				else
+				{
+					PWM_WriteCompare1((int)(250*0.55));
+	        	    PWM_WriteCompare2(0);
+				}
+				*/
+				//　浮いてるとき
+				if((2048 - (int)axi_z_fir[0]) > 0)
+				{
+					PWM_WriteCompare1(0);
+	        	    PWM_WriteCompare2((int)(250*0.15));
+				}
+				//急カーブのとき
+				else if(((2048 - (int)axi_x_fir[0]) > 1000) && ((2048 - (int)axi_x_fir[0]) < -1000))
+				{
+					PWM_WriteCompare1(0);
+	        	    PWM_WriteCompare2((int)(250*0.15));
+				}
+				
+				else if((2048 - (int)axi_z_fir[0]) < -500)
+				{
+					PWM_WriteCompare1((int)(250*0.60));
+	        	    PWM_WriteCompare2(0);
+				}
+				else if(((2048 - (int)axi_x_fir[0]) > -300) && ((2048 - (int)axi_x_fir[0]) < 300))
+				{
+					PWM_WriteCompare1((int)(250*0.80));
+	        	    PWM_WriteCompare2(0);
+				}
+				else
+				{
+					PWM_WriteCompare1((int)(250*0.55));
+	        	    PWM_WriteCompare2(0);
+				}
+				/*
+				if((2048 - (int)axi_z_fir[0]) > 0)
+				{
+					PWM_WriteCompare1(0);
+	        	    PWM_WriteCompare2((int)(250*0.15));
+				}
+				else if((2048 - (int)axi_z_fir[0]) < -500)
+				{
+					PWM_WriteCompare1((int)(250*0.60));
+	        	    PWM_WriteCompare2(0);
+				}
+				else if(((2048 - (int)axi_x_fir[0]) > -300) && ((2048 - (int)axi_x_fir[0]) < 300))
+				{
+					PWM_WriteCompare1((int)(250*0.80));
+	        	    PWM_WriteCompare2(0);
+				}
+				else
+				{
+					PWM_WriteCompare1((int)(250*0.55));
+	        	    PWM_WriteCompare2(0);
+				}
+				*/
+				time++;
+			}
+			else
+			{
+				PWM_WriteCompare1(0);
+	            PWM_WriteCompare2(0);
+			}
+			
             isr_flag = 0;
         }
     }
