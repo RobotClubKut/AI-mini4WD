@@ -107,7 +107,9 @@ int main()
 	uint16 axi_z_fir[17];
 	uint8 axi_counter = 1;
     uint8 axi_fir_i;
-	uint8 msg[32];   
+	uint8 msg[32];
+	
+	uint8 brake_flag = 0;
 	
 	AI_mini4WD_Init(axi_x_fir,axi_y_fir,axi_z_fir,1000);
 	
@@ -166,7 +168,8 @@ int main()
                 }
             }
 			
-			if(time < BUFFER_SIZE)
+			//if(time < BUFFER_SIZE*2)
+			if(1)
 			{
 				/*
 				if((2048 - (int)axi_z_fir[0]) > 0)
@@ -185,34 +188,52 @@ int main()
 	        	    PWM_WriteCompare2(0);
 				}
 				*/
-				//　浮いてるとき
-				if((2048 - (int)axi_z_fir[0]) > 0)
+				
+				if(brake_flag > 0)
 				{
-					PWM_WriteCompare1(0);
-	        	    PWM_WriteCompare2((int)(250*0.15));
+					PWM_WriteCompare1((int)(250*0.45));
+	        	    PWM_WriteCompare2(0);
+					brake_flag--;
+				}
+				//　浮いてるとき
+				//　ジャンプするときは加速したほうが安定した着地をする
+				else if((2048 - (int)axi_z_fir[0]) > -100)
+				{
+					PWM_WriteCompare1((int)(250*0.45));
+	        	    PWM_WriteCompare2(0);
+					brake_flag = 1;
 				}
 				//急カーブのとき
-				else if(((2048 - (int)axi_x_fir[0]) > 1000) && ((2048 - (int)axi_x_fir[0]) < -1000))
+				else if(((2048 - (int)axi_x_fir[0]) > 400) && ((2048 - (int)axi_x_fir[0]) < -400))
 				{
-					PWM_WriteCompare1(0);
-	        	    PWM_WriteCompare2((int)(250*0.15));
+					PWM_WriteCompare1((int)(250*0.45));
+	        	    PWM_WriteCompare2(0);
+					//brake_flag = 3;
 				}
-				
-				else if((2048 - (int)axi_z_fir[0]) < -500)
+				/*直線？*/
+				// 加速度が高すぎると減速
+				else if((2048 - (int)axi_y_fir[0]) > 500)
 				{
-					PWM_WriteCompare1((int)(250*0.60));
+					PWM_WriteCompare1((int)(250*0));
 	        	    PWM_WriteCompare2(0);
 				}
+				/*
 				else if(((2048 - (int)axi_x_fir[0]) > -300) && ((2048 - (int)axi_x_fir[0]) < 300))
 				{
-					PWM_WriteCompare1((int)(250*0.80));
+					//坂で吹っ飛ぶ場合変えてもあまり意味ない
+					PWM_WriteCompare1((int)(250*0.16));
 	        	    PWM_WriteCompare2(0);
 				}
+				*/
 				else
 				{
-					PWM_WriteCompare1((int)(250*0.55));
+					// 3.8V以下なら0.20以上
+					// 3.8V以上なら0.19以下
+					// 3.80V ~ 3.83V -> 0.20
+					PWM_WriteCompare1((int)(250*0.20));
 	        	    PWM_WriteCompare2(0);
 				}
+				
 				/*
 				if((2048 - (int)axi_z_fir[0]) > 0)
 				{
